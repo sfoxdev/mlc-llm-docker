@@ -79,11 +79,8 @@ jobs:
           # Install dependencies
           pip install --upgrade pip wheel setuptools
           pip install pytest tqdm requests fastapi shortuuid prompt_toolkit pydantic
-          pip install --pre -U -f https://mlc.ai/wheels mlc-ai-nightly-cpu
-
           git clone --recursive https://github.com/mlc-ai/mlc-llm.git
           cd mlc-llm
-
           # Configure and Build
           mkdir build
           cd build
@@ -97,7 +94,8 @@ jobs:
       - name: Runtime Validation
         shell: pwsh
         run: |
-          $env:PYTHONPATH = "$PWD/mlc-llm/python;$env:PYTHONPATH"
+          $env:PATH = "$PWD/mlc-llm/build/tvm/Release;$env:PATH"
+          $env:PATH = "$PWD/mlc-llm/build/Release;$env:PATH"
           python -c "import tvm; print('Validation Passed')"
           python -c "import mlc_llm; print('Validation Passed')"
 
