@@ -94,6 +94,11 @@ jobs:
       - name: Runtime Validation
         shell: pwsh
         run: |
+          dir $PWD/mlc-llm/build/tvm/Release
+          dir $PWD/mlc-llm/build/Release
+          # Python modules
+          $env:PYTHONPATH = "$PWD/mlc-llm/python;$env:PYTHONPATH"
+          # DLL paths
           $env:PATH = "$PWD/mlc-llm/build/tvm/Release;$env:PATH"
           $env:PATH = "$PWD/mlc-llm/build/Release;$env:PATH"
           python -c "import tvm; print('Validation Passed')"
