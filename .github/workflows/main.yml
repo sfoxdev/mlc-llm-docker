@@ -35,7 +35,7 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   tests:
-    needs: docker
+    needs: build-docker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
