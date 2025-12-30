@@ -1,4 +1,4 @@
-name: Build mlc-llm for Linux
+name: Build mlc-llm
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: sfoxdev/mlc-llm
 
 jobs:
-  docker:
+  build-docker:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -39,7 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+            
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Running tests
+        run: |
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             pytest /tests
 
@@ -48,7 +56,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract dist
+        run: |
           docker run --name builder-container ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} build
           docker cp builder-container:/src/mlc-llm/python/dist ./dist
           docker rm builder-container
