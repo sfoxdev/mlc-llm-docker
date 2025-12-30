@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: mlc-ai/mlc-llm
+  IMAGE_NAME: sfoxdev/mlc-llm
 
 jobs:
   docker:
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install CUDA Toolkit
-        uses: Jimver/cuda-toolkit@v0.2.21
+        uses: Jimver/cuda-toolkit@v0.2.30
         with:
           cuda: '13.1.0'
 
