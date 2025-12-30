@@ -87,6 +87,9 @@ jobs:
           pip install pytest tqdm requests fastapi shortuuid prompt_toolkit pydantic
           pip install --pre -U -f https://mlc.ai/wheels mlc-ai-nightly-cpu
 
+          git clone --recursive https://github.com/mlc-ai/mlc-llm.git
+          cd mlc-llm
+
           # Configure and Build
           mkdir build
           cd build
@@ -95,8 +98,7 @@ jobs:
             -DUSE_VULKAN=OFF `
             -DUSE_OPENCL=ON `
             -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          cmake --build . --config Release --parallel $env:NUMBER_OF_PROCESSORS
-          cd ..
+          cmake --build . --config Release
 
       - name: TDD Validation
         shell: pwsh
@@ -116,27 +118,3 @@ jobs:
           files: python/dist/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Install Build Tools
-        run: |
-          choco install llvm cmake -y
-          pip install --upgrade pip wheel setuptools pytest
-
-      - name: Clone MLC-LLM
-        run: |
-          git clone --recursive https://github.com/mlc-ai/mlc-llm.git
-
-      - name: Build Wheel
-        working-directory: mlc-llm/python
-        run: |
-          python setup.py bdist_wheel
-
-      - name: Run Tests
-        run: |
-          pytest tests
-
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
-        with:
-          files: mlc-llm/python/dist/*.whl
