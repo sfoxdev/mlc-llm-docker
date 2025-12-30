@@ -1,0 +1,138 @@
+name: Build mlc-llm for Linux
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: mlc-ai/mlc-llm
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+
+      - name: Push Image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Run Tests
+        run: |
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            pytest /tests
+
+  build-linux:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          docker run --name builder-container ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} build
+          docker cp builder-container:/src/mlc-llm/python/dist ./dist
+          docker rm builder-container
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.21
+        with:
+          cuda: '13.1.0'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build MLC-LLM
+        shell: pwsh
+        run: |
+          # Install dependencies
+          pip install --upgrade pip wheel setuptools
+          pip install pytest tqdm requests fastapi shortuuid prompt_toolkit pydantic
+          pip install --pre -U -f https://mlc.ai/wheels mlc-ai-nightly-cpu
+
+          # Configure and Build
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64 `
+            -DUSE_CUDA=ON `
+            -DUSE_VULKAN=OFF `
+            -DUSE_OPENCL=ON `
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build . --config Release --parallel $env:NUMBER_OF_PROCESSORS
+          cd ..
+
+      - name: TDD Validation
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "python;$env:PYTHONPATH"
+          python -c "import mlc_llm; print('Validation Passed')"
+
+      - name: Generate Wheel
+        shell: pwsh
+        run: |
+          cd python
+          python setup.py bdist_wheel
+
+      - name: Release Windows Wheel
+        uses: softprops/action-gh-release@v1
+        with:
+          files: python/dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Install Build Tools
+        run: |
+          choco install llvm cmake -y
+          pip install --upgrade pip wheel setuptools pytest
+
+      - name: Clone MLC-LLM
+        run: |
+          git clone --recursive https://github.com/mlc-ai/mlc-llm.git
+
+      - name: Build Wheel
+        working-directory: mlc-llm/python
+        run: |
+          python setup.py bdist_wheel
+
+      - name: Run Tests
+        run: |
+          pytest tests
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mlc-llm/python/dist/*.whl
