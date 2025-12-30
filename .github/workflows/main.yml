@@ -97,7 +97,7 @@ jobs:
           dir $PWD/mlc-llm/build/tvm/Release
           dir $PWD/mlc-llm/build/Release
           # Python modules
-          $env:PYTHONPATH = "$PWD/mlc-llm/python;$env:PYTHONPATH"
+          $env:PYTHONPATH = "$PWD/mlc-llm/3rdparty/tvm/python;$PWD/mlc-llm/python;$env:PYTHONPATH"
           # DLL paths
           $env:PATH = "$PWD/mlc-llm/build/tvm/Release;$env:PATH"
           $env:PATH = "$PWD/mlc-llm/build/Release;$env:PATH"
